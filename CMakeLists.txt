@@ -66,7 +66,18 @@ target_include_directories(lattice
 
 # Platform-specific flags
 if(APPLE)
-    target_compile_options(lattice PRIVATE -O3 -march=native -ffast-math)
+    # Check if cross-compiling (e.g., x86_64 on arm64 runner)
+    if(CMAKE_OSX_ARCHITECTURES AND NOT CMAKE_OSX_ARCHITECTURES STREQUAL CMAKE_HOST_SYSTEM_PROCESSOR)
+        # Cross-compiling: use generic architecture flags
+        if(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+            target_compile_options(lattice PRIVATE -O3 -march=x86-64-v2 -ffast-math)
+        else()
+            target_compile_options(lattice PRIVATE -O3 -ffast-math)
+        endif()
+    else()
+        # Native build: use -march=native for best performance
+        target_compile_options(lattice PRIVATE -O3 -march=native -ffast-math)
+    endif()
     # Link Apple frameworks (Metal, Accelerate for LAPACK)
     target_link_libraries(lattice PRIVATE "-framework Metal" "-framework Foundation" "-framework Accelerate")
 elseif(UNIX)
