@@ -13,6 +13,7 @@ on:
 
 env:
   CMAKE_BUILD_TYPE: Release
+  LIBRARY_NAME: luxlattice
 
 jobs:
   build-macos:
@@ -34,8 +35,9 @@ jobs:
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
-            -DBUILD_SHARED=ON \
-            -DBUILD_TESTS=OFF
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_TESTS=OFF \
+            -DWITH_GPU=${{ matrix.arch == 'arm64' && 'ON' || 'OFF' }}
 
       - name: Build
         run: cmake --build build --config Release
@@ -62,28 +64,30 @@ jobs:
           Name: lux-lattice
           Description: Lux Lattice Library - GPU-Accelerated Lattice Cryptography
           Version: ${VERSION}
-          Requires:
-          Libs: -L\${libdir} -llattice
-          Libs.private: -framework Metal -framework Foundation -lstdc++
-          Cflags: -I\${includedir}
+          Requires: lux-gpu
+          Libs: -L\${libdir} -lluxlattice
+          Libs.private: ${{ matrix.arch == 'arm64' && '-framework Metal -framework Foundation' || '' }} -lstdc++
+          Cflags: -I\${includedir}/lux/lattice
           EOF
 
       - name: Create tarball
         run: |
           VERSION=${{ steps.version.outputs.version }}
           ARCH=${{ matrix.arch }}
-          mkdir -p dist/include dist/lib/pkgconfig
-          cp include/*.h dist/include/
-          cp build/lib/*.dylib dist/lib/
+          mkdir -p dist/include/lux/lattice dist/lib/pkgconfig
+          cp include/*.h dist/include/lux/lattice/ 2>/dev/null || true
+          cp -r include/* dist/include/lux/lattice/ 2>/dev/null || true
+          cp build/lib/*.dylib dist/lib/ 2>/dev/null || true
+          cp build/lib/*.a dist/lib/ 2>/dev/null || true
           cp build/lib/pkgconfig/*.pc dist/lib/pkgconfig/
           cd dist
-          tar -czvf ../lattice-${VERSION}-macos-${ARCH}.tar.gz .
+          tar -czvf ../lux-lattice-${VERSION}-macos-${ARCH}.tar.gz .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lattice-macos-${{ matrix.arch }}
-          path: lattice-*.tar.gz
+          name: lux-lattice-macos-${{ matrix.arch }}
+          path: lux-lattice-*.tar.gz
 
   build-linux:
     runs-on: ubuntu-22.04
@@ -104,8 +108,9 @@ jobs:
           cmake .. \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED=ON \
-            -DBUILD_TESTS=OFF
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_TESTS=OFF \
+            -DWITH_GPU=OFF
 
       - name: Build
         run: cmake --build build --config Release
@@ -132,28 +137,30 @@ jobs:
           Name: lux-lattice
           Description: Lux Lattice Library - GPU-Accelerated Lattice Cryptography
           Version: ${VERSION}
-          Requires:
-          Libs: -L\${libdir} -llattice
-          Libs.private: -lstdc++
-          Cflags: -I\${includedir}
+          Requires: lux-gpu
+          Libs: -L\${libdir} -lluxlattice
+          Libs.private: -lstdc++ -lpthread -lm
+          Cflags: -I\${includedir}/lux/lattice
           EOF
 
       - name: Create tarball
         run: |
           VERSION=${{ steps.version.outputs.version }}
           ARCH=${{ matrix.arch }}
-          mkdir -p dist/include dist/lib/pkgconfig
-          cp include/*.h dist/include/
-          cp build/lib/*.so dist/lib/ || cp build/lib/*.so.* dist/lib/ || true
+          mkdir -p dist/include/lux/lattice dist/lib/pkgconfig
+          cp include/*.h dist/include/lux/lattice/ 2>/dev/null || true
+          cp -r include/* dist/include/lux/lattice/ 2>/dev/null || true
+          cp build/lib/*.so* dist/lib/ 2>/dev/null || true
+          cp build/lib/*.a dist/lib/ 2>/dev/null || true
           cp build/lib/pkgconfig/*.pc dist/lib/pkgconfig/
           cd dist
-          tar -czvf ../lattice-${VERSION}-linux-${ARCH}.tar.gz .
+          tar -czvf ../lux-lattice-${VERSION}-linux-${ARCH}.tar.gz .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lattice-linux-${{ matrix.arch }}
-          path: lattice-*.tar.gz
+          name: lux-lattice-linux-${{ matrix.arch }}
+          path: lux-lattice-*.tar.gz
 
   release:
     needs: [build-macos, build-linux]
@@ -194,25 +201,38 @@ jobs:
           body: |
             ## Lux Lattice Library v${{ steps.version.outputs.version }}
 
-            GPU-accelerated lattice cryptography library.
+            GPU-accelerated lattice cryptography library with NTT acceleration.
+            Part of the Lux C++ library stack (depends on lux-gpu).
 
             ### Downloads
 
-            | Platform | Architecture | File |
-            |----------|--------------|------|
-            | macOS | arm64 | `lattice-${{ steps.version.outputs.version }}-macos-arm64.tar.gz` |
-            | macOS | x86_64 | `lattice-${{ steps.version.outputs.version }}-macos-x86_64.tar.gz` |
-            | Linux | amd64 | `lattice-${{ steps.version.outputs.version }}-linux-amd64.tar.gz` |
+            | Platform | Architecture | GPU Support | File |
+            |----------|--------------|-------------|------|
+            | macOS | arm64 | Metal | `lux-lattice-${{ steps.version.outputs.version }}-macos-arm64.tar.gz` |
+            | macOS | x86_64 | CPU only | `lux-lattice-${{ steps.version.outputs.version }}-macos-x86_64.tar.gz` |
+            | Linux | amd64 | CPU/CUDA | `lux-lattice-${{ steps.version.outputs.version }}-linux-amd64.tar.gz` |
 
             ### Installation
 
             ```bash
-            # Download and extract
-            curl -LO https://github.com/luxfi/lattice-cpp/releases/download/v${{ steps.version.outputs.version }}/lattice-${{ steps.version.outputs.version }}-$(uname -s | tr A-Z a-z)-$(uname -m).tar.gz
-            tar -xzf lattice-*.tar.gz -C /usr/local
+            # Install lux-gpu first (dependency)
+            curl -LO https://github.com/luxfi/gpu/releases/latest/download/lux-gpu-$(uname -s | tr A-Z a-z)-$(uname -m).tar.gz
+            sudo tar -xzf lux-gpu-*.tar.gz -C /usr/local
 
-            # Verify pkg-config
+            # Install lux-lattice
+            curl -LO https://github.com/luxfi/lattice-cpp/releases/download/v${{ steps.version.outputs.version }}/lux-lattice-${{ steps.version.outputs.version }}-$(uname -s | tr A-Z a-z)-$(uname -m).tar.gz
+            sudo tar -xzf lux-lattice-*.tar.gz -C /usr/local
+
+            # Verify
             pkg-config --libs lux-lattice
+            ```
+
+            ### CGO Usage
+
+            ```bash
+            export CGO_CFLAGS=$(pkg-config --cflags lux-lattice)
+            export CGO_LDFLAGS=$(pkg-config --libs lux-lattice)
+            go build -tags cgo ./...
             ```
           files: release/*
           draft: false
