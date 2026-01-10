@@ -41,26 +41,44 @@ set(METAL_RESOURCES)
 if(APPLE)
     find_program(XCRUN xcrun)
     if(XCRUN)
-        set(METAL_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/src/metal/ntt_kernels.metal")
-        set(METAL_AIR "${CMAKE_CURRENT_BINARY_DIR}/ntt_kernels.air")
+        # All Metal shaders for lattice operations
+        set(METAL_SHADERS
+            ntt_kernels
+            ntt_negacyclic
+            modular
+            twiddle
+            poly_mul
+            sample_ntt
+        )
         set(METAL_LIB "${CMAKE_CURRENT_BINARY_DIR}/lux_lattice.metallib")
+        set(METAL_AIR_FILES)
 
-        if(EXISTS "${METAL_SHADER}")
-            add_custom_command(
-                OUTPUT ${METAL_AIR}
-                COMMAND ${XCRUN} -sdk macosx metal -c ${METAL_SHADER} -o ${METAL_AIR}
-                DEPENDS ${METAL_SHADER}
-                COMMENT "Compiling Metal shader: ntt_kernels.metal"
-            )
+        # Compile each .metal to .air
+        foreach(SHADER ${METAL_SHADERS})
+            set(SHADER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/metal/${SHADER}.metal")
+            set(SHADER_AIR "${CMAKE_CURRENT_BINARY_DIR}/${SHADER}.air")
+            if(EXISTS "${SHADER_SRC}")
+                add_custom_command(
+                    OUTPUT ${SHADER_AIR}
+                    COMMAND ${XCRUN} -sdk macosx metal -c ${SHADER_SRC} -o ${SHADER_AIR}
+                    DEPENDS ${SHADER_SRC}
+                    COMMENT "Compiling Metal shader: ${SHADER}.metal"
+                )
+                list(APPEND METAL_AIR_FILES ${SHADER_AIR})
+                message(STATUS "Metal shader: ${SHADER}.metal")
+            endif()
+        endforeach()
+
+        # Link all .air files into single .metallib
+        if(METAL_AIR_FILES)
             add_custom_command(
                 OUTPUT ${METAL_LIB}
-                COMMAND ${XCRUN} -sdk macosx metallib ${METAL_AIR} -o ${METAL_LIB}
-                DEPENDS ${METAL_AIR}
-                COMMENT "Linking Metal library: lux_lattice.metallib"
+                COMMAND ${XCRUN} -sdk macosx metallib ${METAL_AIR_FILES} -o ${METAL_LIB}
+                DEPENDS ${METAL_AIR_FILES}
+                COMMENT "Linking Metal library: lux_lattice.metallib (${CMAKE_CURRENT_LIST_LENGTH} shaders)"
             )
             add_custom_target(metal_ntt_shaders DEPENDS ${METAL_LIB})
             set(METAL_RESOURCES ${METAL_LIB})
-            message(STATUS "Metal NTT shader: ${METAL_SHADER}")
         endif()
     endif()
 endif()

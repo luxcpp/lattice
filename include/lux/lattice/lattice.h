@@ -35,18 +35,18 @@ extern "C" {
  * Check if GPU acceleration is available.
  * @return true if GPU (Metal/CUDA) is available
  */
-bool lattice_gpu_available(void);
+bool lux_lattice_gpu_available(void);
 
 /**
  * Get the name of the active backend.
  * @return "Metal", "CUDA", or "CPU"
  */
-const char* lattice_get_backend(void);
+const char* lux_lattice_get_backend(void);
 
 /**
  * Clear internal caches (twiddle factors, contexts).
  */
-void lattice_clear_cache(void);
+void lux_lattice_clear_cache(void);
 
 // =============================================================================
 // NTT Context Management
@@ -55,7 +55,7 @@ void lattice_clear_cache(void);
 /**
  * Opaque NTT context handle.
  */
-typedef struct LatticeNTTContext LatticeNTTContext;
+typedef struct LuxLatticeNTTContext LuxLatticeNTTContext;
 
 /**
  * Create an NTT context for the given ring parameters.
@@ -63,13 +63,13 @@ typedef struct LatticeNTTContext LatticeNTTContext;
  * @param Q Prime modulus (Q ≡ 1 mod 2N for NTT-friendly)
  * @return Context handle, or NULL on error
  */
-LatticeNTTContext* lattice_ntt_create(uint32_t N, uint64_t Q);
+LuxLatticeNTTContext* lux_lattice_ntt_create(uint32_t N, uint64_t Q);
 
 /**
  * Free an NTT context.
  * @param ctx Context to free
  */
-void lattice_ntt_destroy(LatticeNTTContext* ctx);
+void lux_lattice_ntt_destroy(LuxLatticeNTTContext* ctx);
 
 // =============================================================================
 // NTT Operations
@@ -82,7 +82,7 @@ void lattice_ntt_destroy(LatticeNTTContext* ctx);
  * @param batch Number of polynomials (for batch processing)
  * @return 0 on success, negative on error
  */
-int lattice_ntt_forward(LatticeNTTContext* ctx, uint64_t* data, uint32_t batch);
+int lux_lattice_ntt_forward(LuxLatticeNTTContext* ctx, uint64_t* data, uint32_t batch);
 
 /**
  * Inverse NTT (frequency → time domain).
@@ -91,7 +91,7 @@ int lattice_ntt_forward(LatticeNTTContext* ctx, uint64_t* data, uint32_t batch);
  * @param batch Number of polynomials
  * @return 0 on success, negative on error
  */
-int lattice_ntt_inverse(LatticeNTTContext* ctx, uint64_t* data, uint32_t batch);
+int lux_lattice_ntt_inverse(LuxLatticeNTTContext* ctx, uint64_t* data, uint32_t batch);
 
 /**
  * Batch forward NTT on multiple polynomials.
@@ -100,7 +100,7 @@ int lattice_ntt_inverse(LatticeNTTContext* ctx, uint64_t* data, uint32_t batch);
  * @param count Number of polynomials
  * @return 0 on success, negative on error
  */
-int lattice_ntt_batch_forward(LatticeNTTContext* ctx,
+int lux_lattice_ntt_batch_forward(LuxLatticeNTTContext* ctx,
                                uint64_t** polys, uint32_t count);
 
 /**
@@ -110,7 +110,7 @@ int lattice_ntt_batch_forward(LatticeNTTContext* ctx,
  * @param count Number of polynomials
  * @return 0 on success, negative on error
  */
-int lattice_ntt_batch_inverse(LatticeNTTContext* ctx,
+int lux_lattice_ntt_batch_inverse(LuxLatticeNTTContext* ctx,
                                uint64_t** polys, uint32_t count);
 
 // =============================================================================
@@ -125,7 +125,7 @@ int lattice_ntt_batch_inverse(LatticeNTTContext* ctx,
  * @param b Second input polynomial (in NTT domain)
  * @return 0 on success, negative on error
  */
-int lattice_poly_mul_ntt(LatticeNTTContext* ctx,
+int lux_lattice_poly_mul_ntt(LuxLatticeNTTContext* ctx,
                           uint64_t* result,
                           const uint64_t* a,
                           const uint64_t* b);
@@ -138,7 +138,7 @@ int lattice_poly_mul_ntt(LatticeNTTContext* ctx,
  * @param b Second input polynomial (coefficient form)
  * @return 0 on success, negative on error
  */
-int lattice_poly_mul(LatticeNTTContext* ctx,
+int lux_lattice_poly_mul(LuxLatticeNTTContext* ctx,
                       uint64_t* result,
                       const uint64_t* a,
                       const uint64_t* b);
@@ -152,7 +152,7 @@ int lattice_poly_mul(LatticeNTTContext* ctx,
  * @param Q Modulus
  * @return 0 on success, negative on error
  */
-int lattice_poly_add(uint64_t* result,
+int lux_lattice_poly_add(uint64_t* result,
                       const uint64_t* a,
                       const uint64_t* b,
                       uint32_t N,
@@ -167,7 +167,7 @@ int lattice_poly_add(uint64_t* result,
  * @param Q Modulus
  * @return 0 on success, negative on error
  */
-int lattice_poly_sub(uint64_t* result,
+int lux_lattice_poly_sub(uint64_t* result,
                       const uint64_t* a,
                       const uint64_t* b,
                       uint32_t N,
@@ -182,7 +182,7 @@ int lattice_poly_sub(uint64_t* result,
  * @param Q Modulus
  * @return 0 on success, negative on error
  */
-int lattice_poly_scalar_mul(uint64_t* result,
+int lux_lattice_poly_scalar_mul(uint64_t* result,
                              const uint64_t* a,
                              uint64_t scalar,
                              uint32_t N,
@@ -201,7 +201,7 @@ int lattice_poly_scalar_mul(uint64_t* result,
  * @param seed Random seed (NULL for system entropy)
  * @return 0 on success, negative on error
  */
-int lattice_sample_gaussian(uint64_t* result,
+int lux_lattice_sample_gaussian(uint64_t* result,
                              uint32_t N,
                              uint64_t Q,
                              double sigma,
@@ -215,7 +215,7 @@ int lattice_sample_gaussian(uint64_t* result,
  * @param seed Random seed (NULL for system entropy)
  * @return 0 on success, negative on error
  */
-int lattice_sample_uniform(uint64_t* result,
+int lux_lattice_sample_uniform(uint64_t* result,
                             uint32_t N,
                             uint64_t Q,
                             const uint8_t* seed);
@@ -229,7 +229,7 @@ int lattice_sample_uniform(uint64_t* result,
  * @param seed Random seed (NULL for system entropy)
  * @return 0 on success, negative on error
  */
-int lattice_sample_ternary(uint64_t* result,
+int lux_lattice_sample_ternary(uint64_t* result,
                             uint32_t N,
                             uint64_t Q,
                             double density,
@@ -245,7 +245,7 @@ int lattice_sample_ternary(uint64_t* result,
  * @param Q Prime modulus
  * @return Primitive root, or 0 if not found
  */
-uint64_t lattice_find_primitive_root(uint32_t N, uint64_t Q);
+uint64_t lux_lattice_find_primitive_root(uint32_t N, uint64_t Q);
 
 /**
  * Compute modular inverse: a^{-1} mod Q.
@@ -253,7 +253,7 @@ uint64_t lattice_find_primitive_root(uint32_t N, uint64_t Q);
  * @param Q Modulus
  * @return Modular inverse, or 0 if not invertible
  */
-uint64_t lattice_mod_inverse(uint64_t a, uint64_t Q);
+uint64_t lux_lattice_mod_inverse(uint64_t a, uint64_t Q);
 
 /**
  * Check if Q is a valid NTT-friendly prime for ring dimension N.
@@ -262,7 +262,7 @@ uint64_t lattice_mod_inverse(uint64_t a, uint64_t Q);
  * @param Q Candidate modulus
  * @return true if valid NTT-friendly prime
  */
-bool lattice_is_ntt_prime(uint32_t N, uint64_t Q);
+bool lux_lattice_is_ntt_prime(uint32_t N, uint64_t Q);
 
 /**
  * Get NTT context parameters.
@@ -270,7 +270,7 @@ bool lattice_is_ntt_prime(uint32_t N, uint64_t Q);
  * @param N Output: ring dimension
  * @param Q Output: modulus
  */
-void lattice_ntt_get_params(const LatticeNTTContext* ctx,
+void lux_lattice_ntt_get_params(const LuxLatticeNTTContext* ctx,
                             uint32_t* N,
                             uint64_t* Q);
 
@@ -278,12 +278,12 @@ void lattice_ntt_get_params(const LatticeNTTContext* ctx,
 // Error Codes
 // =============================================================================
 
-#define LATTICE_SUCCESS          0
-#define LATTICE_ERROR_INVALID_N -1
-#define LATTICE_ERROR_INVALID_Q -2
-#define LATTICE_ERROR_NULL_PTR  -3
-#define LATTICE_ERROR_GPU       -4
-#define LATTICE_ERROR_MEMORY    -5
+#define LUX_LATTICE_SUCCESS          0
+#define LUX_LATTICE_ERROR_INVALID_N -1
+#define LUX_LATTICE_ERROR_INVALID_Q -2
+#define LUX_LATTICE_ERROR_NULL_PTR  -3
+#define LUX_LATTICE_ERROR_GPU       -4
+#define LUX_LATTICE_ERROR_MEMORY    -5
 
 #ifdef __cplusplus
 }
